@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+qdrant-client
+python-dotenv
+pydantic
+passlib[bcrypt]
+python-jose[cryptography]
