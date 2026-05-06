@@ -72,8 +72,8 @@ export default function Apply() {
             <motion.div key="form">
               <div className="page-header page-header--sm">
                 <h1>Başvuru Formu</h1>
-                {form.job_id && (
-                  <p>İlan <strong>#{form.job_id}</strong> için başvuruyorsunuz</p>
+                {form.job_title && (
+                  <p><strong>{form.job_title}</strong> pozisyonu için başvuruyorsunuz</p>
                 )}
                 {searchParams.get('name') && (
                   <div className="ai-notice">
@@ -84,17 +84,7 @@ export default function Apply() {
 
               <div className="form-card">
                 <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">İlan No <span className="required">*</span></label>
-                    <input
-                      className={`form-input ${errors.job_id ? 'form-input--error' : ''}`}
-                      value={form.job_id}
-                      onChange={update('job_id')}
-                      placeholder="örn: 42"
-                    />
-                    {errors.job_id && <span className="form-error">{errors.job_id}</span>}
-                  </div>
-
+                  {/* İLAN NO KUTUCUĞU KALDIRILDI */}
                   <div className="form-group">
                     <label className="form-label">Ad Soyad <span className="required">*</span></label>
                     <input

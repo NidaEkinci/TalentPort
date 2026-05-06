@@ -6,9 +6,14 @@ from models import Job, ApplicationForm, RegisterRequest, LoginRequest
 from auth import (
     hash_password, verify_password, create_token, get_current_user, get_optional_user, bearer
 )
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel
 from datetime import datetime
 import json, os, uuid
+
+class SemanticSearchRequest(BaseModel):
+    vector: List[float]
+    limit: int = 10
 
 app = FastAPI(title="TalentPort API")
 
@@ -140,6 +145,31 @@ def get_job(job_id: str):
         offset = next_offset
 
     raise HTTPException(status_code=404, detail="İlan bulunamadı")
+
+@app.post("/api/jobs/search")
+def semantic_search(req: SemanticSearchRequest):
+    """JobScoutAI'ın CV vektörü göndererek ilan aradığı endpoint"""
+    hits = client.query_points(
+        collection_name=COLLECTION,
+        query=req.vector,
+        limit=req.limit,
+        with_payload=True
+    ).points
+
+    return {
+        "jobs": [
+            {
+                "id":          str(h.payload.get("job_id", h.id)),
+                "title":       h.payload.get("title", ""),
+                "company":     h.payload.get("company", h.payload.get("company_name", "")),
+                "location":    h.payload.get("location", ""),
+                "description": h.payload.get("description", ""),
+                "score":       h.score,
+            }
+            for h in hits
+        ]
+    }
+
 
 # --- APPLICATIONS ---
 
