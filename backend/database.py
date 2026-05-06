@@ -41,6 +41,25 @@ def init_db():
             email        TEXT NOT NULL,
             phone        TEXT,
             cover_letter TEXT,
+                       
+            graduation_status TEXT,
+            university        TEXT,
+            department        TEXT,
+            graduation_year   TEXT,
+            gpa               TEXT,
+
+            skills            TEXT,
+            cert_links        TEXT,
+
+            company           TEXT,
+            position          TEXT,
+            github            TEXT,
+            linkedin          TEXT,
+
+            work_model        TEXT,
+            military          TEXT,
+            driving_license   INTEGER DEFAULT 0,
+
             created_at   TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );

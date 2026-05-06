@@ -178,18 +178,32 @@ def apply(
     form: ApplicationForm,
     credentials: HTTPAuthorizationCredentials = Security(bearer)
 ):
+    import json
     current_user = get_optional_user(credentials)
     user_id = current_user["sub"] if current_user else None
 
     db = get_db()
     app_id = str(uuid.uuid4())
     db.execute(
-        """INSERT INTO applications
-           (id, user_id, job_id, job_title, name, email, phone, cover_letter, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?)""",
-        (app_id, user_id, form.job_id, form.job_title,
-         form.name, form.email, form.phone, form.cover_letter,
-         datetime.utcnow().isoformat())
+        """INSERT INTO applications (
+           id, user_id, job_id, job_title, name, email, phone, cover_letter,
+           graduation_status, university, department, graduation_year, gpa,
+           skills, cert_links,
+           company, position, github, linkedin,
+           work_model, military, driving_license,
+           created_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            app_id, user_id, form.job_id, form.job_title,
+            form.name, form.email, form.phone, form.cover_letter,
+            form.graduation_status, form.university, form.department, form.graduation_year, form.gpa,
+            json.dumps([s.model_dump() for s in form.skills], ensure_ascii=False),
+            json.dumps(form.cert_links, ensure_ascii=False),
+            form.company, form.position, form.github, form.linkedin,
+            form.work_model, form.military,
+            1 if form.driving_license else 0,
+            datetime.utcnow().isoformat()
+        )
     )
     db.commit()
     db.close()
