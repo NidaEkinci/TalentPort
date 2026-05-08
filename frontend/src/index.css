@@ -1009,3 +1009,37 @@ main { flex: 1; }
   font-weight: 500;
 }
 .checkbox-option input { width: 16px; height: 16px; accent-color: var(--brand); }
+
+
+/*08.05*/
+/* ===== AI FILL BOX ===== */
+.ai-fill-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  border: 1.5px solid rgba(37,99,235,0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.ai-fill-box__text {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.ai-fill-box__icon { font-size: 1.5rem; flex-shrink: 0; }
+.ai-fill-box__text strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+.ai-fill-box__text p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}

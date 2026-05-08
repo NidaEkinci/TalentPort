@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { applyJob } from '../api/client'
+import { applyJob, parseCv } from '../api/client'
 
 const STEPS = ['Kişisel', 'Eğitim', 'Yetkinlikler', 'Deneyim', 'Tercihler']
 
@@ -38,17 +38,55 @@ const slideVariants = {
   exit:  (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 }
 
+// URL'den gelen JSON parametresini güvenli oku
+function parseUrlData(searchParams) {
+  const raw = searchParams.get('data')
+  if (!raw) return {}
+  try { return JSON.parse(decodeURIComponent(raw)) }
+  catch { return {} }
+}
+
+const EMPTY_FORM = {
+  job_id: '', job_title: '',
+  name: '', email: '', phone: '', cover_letter: '',
+  graduation_status: '', university: '', department: '',
+  graduation_year: '', gpa: '',
+  skills: [], cert_links: [''],
+  company: '', position: '', github: '', linkedin: '',
+  work_model: '', military: '', driving_license: false,
+}
+
 export default function Apply() {
   const [searchParams] = useSearchParams()
   const jobId    = searchParams.get('job_id')    || ''
   const jobTitle = searchParams.get('job_title') || ''
 
+   // URL'den gelen AI verisi (JobScoutAI yönlendirmesi)
+  const urlData  = parseUrlData(searchParams)
+
+  const [form, setForm] = useState({
+    ...EMPTY_FORM,
+    job_id:    jobId,
+    job_title: jobTitle,
+    // URL'den gelen veri varsa ilgili alanları doldur
+    ...urlData,
+    // job_id ve job_title URL parametresi her zaman öncelikli
+    ...(jobId    ? { job_id: jobId }       : {}),
+    ...(jobTitle ? { job_title: jobTitle } : {}),
+    // cert_links en az bir boş alan içermeli
+    cert_links: urlData.cert_links?.length ? urlData.cert_links : [''],
+  })
+
   const [step, setStep]         = useState(0)
   const [direction, setDirection] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading]   = useState(false)
+  const [parsing, setParsing]   = useState(false)  // AI doldurma yükleniyor
+  const [parseError, setParseError] = useState('')
   const [errors, setErrors]     = useState({})
+  const fileInputRef            = useRef(null)
 
+  /*
   const [form, setForm] = useState({
      // Temel
     job_id: jobId, job_title: jobTitle,
@@ -64,6 +102,7 @@ export default function Apply() {
     // Tercihler
     work_model: '', military: '', driving_license: false,
   })
+  
 
   const set = (key) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
@@ -133,6 +172,87 @@ export default function Apply() {
       setLoading(false)
     }
   }
+  */
+
+  const set = (key) => (e) => {
+    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    setForm(f => ({ ...f, [key]: val }))
+    setErrors(er => ({ ...er, [key]: undefined }))
+  }
+
+  const toggleSkill = (name) => {
+    setForm(f => {
+      const exists = f.skills.find(s => s.name === name)
+      if (exists) return { ...f, skills: f.skills.filter(s => s.name !== name) }
+      return { ...f, skills: [...f.skills, { name, level: 'Orta' }] }
+    })
+  }
+
+  const setSkillLevel = (name, level) => {
+    setForm(f => ({
+      ...f, skills: f.skills.map(s => s.name === name ? { ...s, level } : s)
+    }))
+  }
+
+  const addCertLink    = () => setForm(f => ({ ...f, cert_links: [...f.cert_links, ''] }))
+  const setCertLink    = (i, val) => setForm(f => {
+    const links = [...f.cert_links]; links[i] = val
+    return { ...f, cert_links: links }
+  })
+  const removeCertLink = (i) => setForm(f => ({
+    ...f, cert_links: f.cert_links.filter((_, idx) => idx !== i)
+  }))
+
+  // AI ile form doldurma
+  const handleAiParse = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setParsing(true); setParseError('')
+    try {
+      setLoading(true)
+      const res  = await parseCv(file)
+      console.log("AI'dan Gelen Ham Veri:", res.data);
+      const data = res.data
+      setForm(f => ({
+        ...f,
+        ...data,
+        job_id:    f.job_id,    // ilanı değiştirme
+        job_title: f.job_title,
+        cert_links: data.cert_links?.length ? data.cert_links : [''],
+      }))
+    } catch {
+      setParseError('CV okunamadı, lütfen tekrar deneyin.')
+    } finally {
+      setParsing(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const validateStep = () => {
+    const e = {}
+    if (step === 0) {
+      if (!form.name.trim())  e.name  = 'Ad soyad zorunludur'
+      if (!form.email.trim()) e.email = 'E-posta zorunludur'
+    }
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const next = () => { if (!validateStep()) return; setDirection(1);  setStep(s => Math.min(s + 1, STEPS.length - 1)) }
+  const prev = () => {                               setDirection(-1); setStep(s => Math.max(s - 1, 0)) }
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    try {
+      await applyJob({ ...form, cert_links: form.cert_links.filter(l => l.trim()) })
+      setSubmitted(true)
+    } catch {
+      alert('Bir hata oluştu, lütfen tekrar deneyin.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   if (submitted) return (
     <motion.div className="auth-page"
@@ -158,12 +278,40 @@ export default function Apply() {
         <div className="page-header page-header--sm">
           <h1>Başvuru Formu</h1>
           {jobTitle && <p><strong>{jobTitle}</strong> için başvuruyorsunuz</p>}
-          {searchParams.get('name') && (
+
+          {urlData.name && (
             <div className="ai-notice">
-              <span>🤖</span> AI tarafından otomatik dolduruldu — kontrol edin
+              <span>🤖</span> JobScoutAI tarafından otomatik dolduruldu
             </div>
           )}
         </div>
+
+        {/* AI Doldurma Butonu — sadece JobScoutAI'dan gelmediyse göster */}
+        {!urlData.name && (
+          <div className="ai-fill-box">
+            <div className="ai-fill-box__text">
+              <span className="ai-fill-box__icon">⚡</span>
+              <div>
+                <strong>AI ile Formu Hızlı Doldurun</strong>
+                <p>CV'nizi yükleyin, bilgileriniz otomatik aktarılsın. Her adımda düzenleyebilirsiniz.</p>
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file" accept=".pdf"
+              style={{ display: 'none' }}
+              onChange={handleAiParse}
+            />
+            <button
+              className="btn btn--primary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={parsing}
+            >
+              {parsing ? <><span className="spinner" /> Okunuyor...</> : '📄 CV Yükle'}
+            </button>
+          </div>
+        )}
+        {parseError && <p style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem' }}>{parseError}</p>}
 
         <StepIndicator current={step} />
 

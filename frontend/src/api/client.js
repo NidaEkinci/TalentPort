@@ -20,3 +20,10 @@ export const applyJob = (data) => API.post('/api/apply', data)
 export const registerUser = (data) => API.post('/api/register', data)
 export const loginUser = (data) => API.post('/api/login', data)
 export const getMyApplications = () => API.get('/api/my-applications')
+export const parseCv = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return axios.post('http://localhost:8001/api/parse-cv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
