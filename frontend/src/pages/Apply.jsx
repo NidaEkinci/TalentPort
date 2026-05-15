@@ -209,7 +209,6 @@ export default function Apply() {
     if (!file) return
     setParsing(true); setParseError('')
     try {
-      setLoading(true)
       const res  = await parseCv(file)
       console.log("AI'dan Gelen Ham Veri:", res.data);
       const data = res.data

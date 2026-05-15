@@ -54,3 +54,26 @@ class ApplicationForm(BaseModel):
 
 
     cv_text: Optional[str] = ""  # AI'dan gelen CV metni
+
+
+class HybridSearchParams(BaseModel):
+    max_results:     int   = 10
+    semantic_pool:   int   = 50
+    semantic_weight: float = 0.6
+    tfidf_weight:    float = 0.4
+
+
+class MatchedJob(BaseModel):
+    id:             str
+    title:          str
+    company:        str
+    location:       str
+    description:    str
+    semantic_score: float
+    tfidf_score:    float
+    combined_score: float
+
+
+class CVMatchResponse(BaseModel):
+    cv_text: str
+    jobs:    List[MatchedJob]

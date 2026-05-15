@@ -1,15 +1,20 @@
-from fastapi import FastAPI, HTTPException, Security, Depends
+from fastapi import FastAPI, HTTPException, Security, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
 from database import client, COLLECTION, get_db
-from models import Job, ApplicationForm, RegisterRequest, LoginRequest
+from models import (
+    Job, ApplicationForm, RegisterRequest, LoginRequest,
+    HybridSearchParams, MatchedJob, CVMatchResponse,
+)
 from auth import (
     hash_password, verify_password, create_token, get_current_user, get_optional_user, bearer
 )
+from services.cv_parser import pdf_oku, gemini_ayristir
+from services.hybrid_search import hybrid_search
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
-import json, os, uuid
+import json, os, uuid, io
 
 class SemanticSearchRequest(BaseModel):
     vector: List[float]
@@ -169,6 +174,55 @@ def semantic_search(req: SemanticSearchRequest):
             for h in hits
         ]
     }
+
+
+# --- CV PARSING & HYBRID MATCHING ---
+
+@app.post("/api/parse-cv")
+async def parse_cv(file: UploadFile = File(...)):
+    """PDF CV'yi okur, Gemini ile yapılandırılmış JSON form alanlarına çevirir."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Sadece PDF dosyası kabul edilir")
+
+    try:
+        pdf_bytes = await file.read()
+        cv_text = pdf_oku(pdf_bytes)
+        if not cv_text:
+            return {"error": "PDF'den metin çıkarılamadı"}
+
+        parsed = gemini_ayristir(cv_text)
+        if parsed is None:
+            return {"error": "Gemini CV'yi ayrıştıramadı"}
+        return parsed
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/cv-match", response_model=CVMatchResponse)
+async def cv_match(
+    file:            UploadFile = File(...),
+    max_results:     int        = Form(10),
+    semantic_pool:   int        = Form(50),
+    semantic_weight: float      = Form(0.6),
+    tfidf_weight:    float      = Form(0.4),
+):
+    """PDF CV'yi okur ve hibrit arama (semantic + TF-IDF) ile en uygun ilanları sıralar."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Sadece PDF dosyası kabul edilir")
+
+    pdf_bytes = await file.read()
+    cv_text = pdf_oku(pdf_bytes)
+    if not cv_text:
+        raise HTTPException(status_code=422, detail="PDF'den metin çıkarılamadı")
+
+    jobs = hybrid_search(
+        cv_text=cv_text,
+        max_results=max_results,
+        semantic_pool=semantic_pool,
+        semantic_weight=semantic_weight,
+        tfidf_weight=tfidf_weight,
+    )
+    return CVMatchResponse(cv_text=cv_text, jobs=[MatchedJob(**j) for j in jobs])
 
 
 # --- APPLICATIONS ---

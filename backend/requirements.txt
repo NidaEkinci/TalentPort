@@ -5,3 +5,10 @@ python-dotenv
 pydantic
 passlib[bcrypt]
 python-jose[cryptography]
+python-multipart
+pymupdf
+google-genai
+sentence-transformers
+transformers<5
+scikit-learn
+numpy
