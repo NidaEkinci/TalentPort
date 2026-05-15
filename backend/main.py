@@ -14,7 +14,7 @@ from services.hybrid_search import hybrid_search
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
-import json, os, uuid, io
+import uuid
 
 class SemanticSearchRequest(BaseModel):
     vector: List[float]
@@ -30,24 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Başvuruları basitçe JSON dosyasına kaydediyoruz
-# (İleride PostgreSQL'e taşınabilir)
-APPLICATIONS_FILE = "applications.json"
-
-def load_applications():
-    if not os.path.exists(APPLICATIONS_FILE):
-        return []
-    with open(APPLICATIONS_FILE) as f:
-        return json.load(f)
-
-def save_application(data: dict):
-    apps = load_applications()
-    apps.append(data)
-    with open(APPLICATIONS_FILE, "w") as f:
-        json.dump(apps, f, ensure_ascii=False, indent=2)
-
-
-# --- ENDPOINTS ---
 # --- AUTH ---
 
 @app.post("/api/register")

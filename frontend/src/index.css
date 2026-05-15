@@ -393,6 +393,17 @@ main { flex: 1; }
   border-radius: 100px;
   white-space: nowrap;
 }
+.job-card__match {
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  color: #2563eb;
+  border: 1px solid rgba(37,99,235,0.25);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 100px;
+  white-space: nowrap;
+  cursor: help;
+}
 
 .job-card__title {
   font-family: var(--font-display);

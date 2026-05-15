@@ -46,7 +46,12 @@ export default function JobCard({ job, index }) {
             {job.location || 'Uzaktan'}
           </span>
         </div>
-        <div className="job-card__badge">Tam Zamanlı</div>
+        {typeof job.combined_score === 'number'
+          ? <div className="job-card__match" title={`Semantik: ${(job.semantic_score * 100).toFixed(0)}% · Anahtar kelime: ${(job.tfidf_score * 100).toFixed(0)}%`}>
+              %{Math.round(job.combined_score * 100)} uyumlu
+            </div>
+          : <div className="job-card__badge">Tam Zamanlı</div>
+        }
       </div>
 
       <h3 className="job-card__title">{job.title}</h3>
